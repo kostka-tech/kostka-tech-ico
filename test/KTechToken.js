@@ -56,4 +56,23 @@ contract('KTechToken', function(accounts) {
         });
     });
 
+    it('approves tokens for delegated transfer', function() {
+        return KTechToken.deployed().then(function(instance) {
+            tokenInstance = instance;
+            return tokenInstance.approve.call(accounts[1], 100);
+        }).then(function(success) {
+            assert.equal(success, true);
+            return tokenInstance.approve(accounts[1], 100, { from: accounts[0] });
+        }).then(function(receipt) {
+            assert.equal(receipt.logs.length, 1);
+            assert.equal(receipt.logs[0].event, 'Approval');
+            assert.equal(receipt.logs[0].args._owner, accounts[0]);
+            assert.equal(receipt.logs[0].args._spender, accounts[1]);
+            assert.equal(receipt.logs[0].args._value, 100);
+            return tokenInstance.allowance(accounts[0], accounts[1]);
+        }).then(function(allowance) {
+            assert.equal(allowance.toNumber(), 100);
+        });
+    });
+
 });
