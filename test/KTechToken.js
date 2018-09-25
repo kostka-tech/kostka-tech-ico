@@ -75,4 +75,46 @@ contract('KTechToken', function(accounts) {
         });
     });
 
+    it('handles delegated token transfers', function() {
+        return KTechToken.deployed().then(function(instance) {
+            tokenInstance = instance;
+            fromAccount = accounts[2];
+            toAccount = accounts[3];
+            spendingAccount = accounts[4];
+            // Transfer tokens to fromAccount
+            return tokenInstance.transfer(fromAccount, 100, { from: accounts[0]});
+        }).then(function(receipt) {
+            // Approve spendingAccount to spend 10 tokens from fromAccount
+            return tokenInstance.approve(spendingAccount, 10, { from: fromAccount});
+        }).then(function(receipt) {
+            // Try to transfer more than the sender's balance
+            return tokenInstance.transferFrom(fromAccount, toAccount, 999, { from: spendingAccount});
+        }).then(assert.fail).catch(function(error) {
+            assert(error.message.indexOf('revert') >= 0);
+            // Try transferring something larger than the approved amount
+            return tokenInstance.transferFrom(fromAccount, toAccount, 20, { from: spendingAccount});
+        }).then(assert.fail).catch(function(error) {
+            assert(error.message.indexOf('revert') >= 0, 'should not allow transfer more than approved amount');
+            return tokenInstance.transferFrom.call(fromAccount, toAccount, 10, { from: spendingAccount});
+        }).then(function(success) {
+            assert.equal(success, true);
+            return tokenInstance.transferFrom(fromAccount, toAccount, 10, { from: spendingAccount});
+        }).then(function(receipt) {
+            assert.equal(receipt.logs.length, 1);
+            assert.equal(receipt.logs[0].event, 'Transfer');
+            assert.equal(receipt.logs[0].args._from, fromAccount);
+            assert.equal(receipt.logs[0].args._to, toAccount);
+            assert.equal(receipt.logs[0].args._value, 10);
+            return tokenInstance.balanceOf(fromAccount);
+        }).then(function(balance) {
+            assert.equal(balance.toNumber(), 90);
+            return tokenInstance.balanceOf(toAccount);
+        }).then(function(balance) {
+            assert.equal(balance.toNumber(), 10);
+            return tokenInstance.allowance(fromAccount, spendingAccount);
+        }).then(function(allowance) {
+            assert.equal(allowance.toNumber(), 0);
+        });
+    });
+
 });
