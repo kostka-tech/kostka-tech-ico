@@ -61,4 +61,24 @@ contract('KTechTokenSale', function(accounts) {
         });
     });
 
+    it('should end token sale', function() {
+        return KTechToken.deployed().then(function(instance) {
+            tokenInstance = instance;
+            return KTechTokenSale.deployed();
+        }).then(function(instance) {
+            tokenSaleInstance = instance;
+            return tokenSaleInstance.endSale({ from: buyer });
+        }).then(assert.fail).catch(function(error) {
+            assert(error.message.indexOf('revert') >= 0, 'only allow admin end sale');
+            return tokenSaleInstance.endSale({ from: admin });
+        }).then(function(receipt) {
+            return tokenInstance.balanceOf(admin);
+        }).then(function(balance) {
+            assert.equal(balance.toNumber(), 41999990);
+            return tokenSaleInstance.tokenPrice();
+        }).then(function(price) {
+            assert.equal(price.toNumber(), 0 );
+        });
+    });
+
 });
