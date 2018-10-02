@@ -1,6 +1,7 @@
 .idea
 kostka-tech-ico.iml
 /build
+/node_modules
 
 
 
